@@ -3,7 +3,7 @@
 ## Introduction
 
 This proposal introduces a mechanism through which WebGPU can draw colors
-brighter than white (`#FFFFFF`).
+brighter than `white` (`#FFFFFF`).
 
 ## Background
 
@@ -16,9 +16,9 @@ interval are [clamped in luminance but not in chrominance](https://www.w3.org/TR
 ### High dynamic range headroom of a display
 
 A display is considered high dynamic range (HDR) if it can display colors
-brighter than white (#FFFFFF). The HDR capability of a display is parameterized
+brighter than `white`. The HDR capability of a display is parameterized
 by its HDR headroom, which defined as the ratio between the maximum brightness
-that the display can currently produce to the brightness of white.
+that the display can currently produce to the brightness of `white`.
 
 A display which is not HDR (has an HDR headroom of 1) is called standard dynamic
 range (SDR).
@@ -26,7 +26,7 @@ range (SDR).
 ### High dynamic range headroom of content
 
 The HDR headroom of content is the ratio between the maximum brightness of the
-content to the brightness of white in that content.
+content to the brightness of `white` in that content.
 
 ## Goal
 
