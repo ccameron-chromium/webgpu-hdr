@@ -27,8 +27,8 @@ enum ExtendedRangeBehavior {
 };
 
 dictionary ExtendedRangeMetadata {
-  required float headroom = 1.0;
-  ExtendedRangeBehavior behavior = 'default';
+  required float headroom;
+  ExtendedRangeBehavior behavior = "default";
 };
 
 dictionary CanvasColorMetadata {
