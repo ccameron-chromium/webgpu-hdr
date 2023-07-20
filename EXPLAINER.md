@@ -7,9 +7,26 @@ brighter than white (`#FFFFFF`).
 
 ## Background
 
+### Existing WebGPU Behavior
+
 WebGPU can currently create a canvas with a `GPUTextureFormat` of
 "rgba16float". When this is done, values that are outside of the [0, 1]
 interval are [clamped in luminance but not in chrominance](https://www.w3.org/TR/webgpu/#canvas-color-space).
+
+### High dynamic range headroom of a display
+
+A display is considered high dynamic range (HDR) if it can display colors
+brighter than white (#FFFFFF). The HDR capability of a display is parameterized
+by its HDR headroom, which defined as the ratio between the maximum brightness
+that the display can currently produce to the brightness of white.
+
+A display which is not HDR (has an HDR headroom of 1) is called standard dynamic
+range (SDR).
+
+### High dynamic range headroom of content
+
+The HDR headroom of content is the ratio between the maximum brightness of the
+content to the brightness of white in that content.
 
 ## Goal
 
@@ -21,14 +38,8 @@ canvas can indicate that its luminance should not be clamped.
 Add the following new dictionaries.
 
 ```webidl
-enum ExtendedRangeBehavior {
-  "default",
-  "clamp",
-};
-
 dictionary ExtendedRangeMetadata {
   required float headroom;
-  ExtendedRangeBehavior behavior = "default";
 };
 
 dictionary CanvasColorMetadata {
@@ -46,20 +57,10 @@ value less than `headroom` and are capable of being displayed by the display
 device should not be clamped in luminance.
 
 If the display device cannot display brightness up to the specified `headroom`,
-then the display of the canvas depends on the `behavior` property.
-
-If the `behavior` property is set to `"default"`, then the display will perform
-a tone mapping operation on the entire canvas to map the brightness range
-specified by `headroom` to the range of the display. This will affect the way
-that all colors in the canvas are displayed (but will not affect the display of
-any content outside of the canvas). The exact tone mapping operation not
-specified and depends on the user agent, but an operation similar to the one in
-ITU-R BT.2408 Annex 5, treating white as 203 nits is recommended.
-
-If the `behavior` property is set to `"clamp"`, then all colors that are outside
-of the capabilities of the display device will be clamped to the displayable
-color range of the display device. All colors in the canvas that are within the
-capabilities of the display device should not be altered.
+then all colors that are outside of the capabilities of the display device will
+be clamped to the displayable color range of the display device. All colors in
+the canvas that are within the capabilities of the display device should not be
+altered.
 
 ## Non goals and future work
 
@@ -74,3 +75,8 @@ content colour volume (CCV) metadata, content light level (CLL), diffuse white
 luminance metadata (NDWL), and reference viewing environment (REVE). The natural
 proposal to include these would add new members to `CanvasColorMetadata`
 corresponding to the various types of metadata.
+
+This proposal does not introduce any non-trivial (clamping) tone mapping
+behaviors. Additional tone mapping behaviors can be introduced by adding
+corresponding new members to CanvasColorMetadata.
+
