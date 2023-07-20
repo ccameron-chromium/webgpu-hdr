@@ -7,26 +7,11 @@ brighter than `white` (`#FFFFFF`).
 
 ## Background
 
-### Existing WebGPU Behavior
+## Existing WebGPU Behavior
 
 WebGPU can currently create a canvas with a `GPUTextureFormat` of
 "rgba16float". When this is done, values that are outside of the [0, 1]
-interval are [clamped in luminance but not in chrominance](https://www.w3.org/TR/webgpu/#canvas-color-space).
-
-### High dynamic range headroom of a display
-
-A display is considered high dynamic range (HDR) if it can display colors
-brighter than `white`. The HDR capability of a display is parameterized
-by its HDR headroom, which defined as the ratio between the maximum brightness
-that the display can currently produce to the brightness of `white`.
-
-A display which is not HDR (has an HDR headroom of 1) is called standard dynamic
-range (SDR).
-
-### High dynamic range headroom of content
-
-The HDR headroom of content is the ratio between the maximum brightness of the
-content to the brightness of `white` in that content.
+interval are clamped to the [standard dynamic range of the display device](https://www.w3.org/TR/webgpu/#canvas-color-space).
 
 ## Goal
 
@@ -38,12 +23,8 @@ canvas can indicate that its luminance should not be clamped.
 Add the following new dictionaries.
 
 ```webidl
-dictionary ExtendedRangeMetadata {
-  required float headroom;
-};
-
 dictionary CanvasColorMetadata {
-  ExtendedRangeMetadata extendedRange;
+  boolean extendedRange = false;
 };
 
 partial dictionary GPUCanvasConfiguration {
@@ -52,15 +33,9 @@ partial dictionary GPUCanvasConfiguration {
 ```
 
 When a canvas is created with a `GPUCanvasConfiguration` that specifies a
-`colorMetadata` which specifies an `extendedRange`, colors that have a linear
-value less than `headroom` and are capable of being displayed by the display
-device should not be clamped in luminance.
-
-If the display device cannot display brightness up to the specified `headroom`,
-then all colors that are outside of the capabilities of the display device will
-be clamped to the displayable color range of the display device. All colors in
-the canvas that are within the capabilities of the display device should not be
-altered.
+`colorMetadata` which specifies `extendedRange` as `true`, then colors will
+not be clamped to the standard dynamic range, but rather will be clamped
+to full the dynamic range of the display device.
 
 ## Non goals and future work
 
