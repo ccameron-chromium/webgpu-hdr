@@ -16,15 +16,21 @@ interval are clamped to the [standard dynamic range of the display device](https
 ## Goal
 
 The goal of this proposal is to provide a mechanism through which a WebGPU
-canvas can indicate that its luminance should not be clamped.
+canvas can indicate that its colors should not be clamped to standard
+dynamic range.
 
 ## API proposal
 
 Add the following new dictionaries.
 
 ```webidl
+enum CanvasColorMode {
+  "default",
+  "extended",
+};
+
 dictionary CanvasColorMetadata {
-  bool extendedRange = false;
+  CanvasColorMode mode = "default";
 };
 
 partial dictionary GPUCanvasConfiguration {
@@ -33,7 +39,7 @@ partial dictionary GPUCanvasConfiguration {
 ```
 
 When a canvas is created with a `GPUCanvasConfiguration` which specifies a
-`colorMetadata` which specifies `extendedRange` as `true`, then colors will not
+`colorMetadata` which specifies a `mode` of `"extended"`, then colors will not
 be clamped to the standard dynamic range, but rather will be clamped to full the
 dynamic range of the display device.
 
