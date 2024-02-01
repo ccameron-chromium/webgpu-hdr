@@ -27,10 +27,14 @@ accurate characterization of the behavior of all implemenations is:
 
 > During presentation, the color values in the canvas are converted to the color
 > space of the screen and are then clamped to the `[0, 1]` interval in that
-> color space. Note that color values outside of the `[0, 1]` interval may be
-> used to display colors outside of the gamut defined by the canvas' color
-> space’s primaries, when permitted by the configured format and the user’s
-> display capabilities.
+> color space.
+> 
+> Canvas color values outside of the `[0, 1]` interval may be used to display
+> colors outside of the gamut defined by the canvas' color space’s primaries,
+> when permitted by the configured format and the user’s display capabilities.
+> E.g, the color value (1.09,-0.23,-0.15) in an 'srgb' canvas will produce
+> the same color as the color value (1,0,0) in 'display-p3' canvas.
+
 
 ## Goal
 
