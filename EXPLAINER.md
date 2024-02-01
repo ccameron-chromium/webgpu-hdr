@@ -13,6 +13,25 @@ WebGPU can currently create a canvas with a `GPUTextureFormat` of
 "rgba16float". When this is done, values that are outside of the [0, 1]
 interval are clamped to the [standard dynamic range of the display device](https://www.w3.org/TR/webgpu/#canvas-color-space).
 
+The current text of that section indicates
+
+> During presentation, the chrominance of color values outside of the [0, 1]
+> range is not to be clamped to that range; extended values may be used to
+> display colors outside of the gamut defined by the canvas' color space’s
+> primaries, when permitted by the configured format and the user’s display
+> capabilities. This is in contrast with luminance, which is to be clamped
+> to the maximum standard dynamic range luminance.
+
+This is not an entirely accurate description of the current behavior. A more
+accurate characterization of the behavior of all implemenations is:
+
+> During presentation, the color values in the canvas are converted to the color
+> space of the screen and are then clamped to the `[0, 1]` interval in that
+> color space. Note that color values outside of the `[0, 1]` interval may be
+> used to display colors outside of the gamut defined by the canvas' color
+> space’s primaries, when permitted by the configured format and the user’s
+> display capabilities.
+
 ## Goal
 
 The goal of this proposal is to provide a mechanism through which a WebGPU
