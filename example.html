@@ -1,0 +1,89 @@
+<html>
+<head>
+<script>
+var current_screen_details;
+var rendering_hdr_headroom = 1;
+
+function onRenderingHdrHeadroomSliderChanged() {
+  rendering_hdr_headroom = Math.pow(2.0, RenderingHdrHeadroomSlider.value);
+  RenderingHdrHeadroomSliderLabel.innerText = 'Rendering HDR headroom: ' + rendering_hdr_headroom.toFixed(2);
+  drawWebGPUCanvas();
+}
+
+// Clear the canvas to rendering_hdr_headroom using WebGPU.
+async function drawWebGPUCanvas() {
+  const canvas = document.getElementById('WebGPUCanvas');
+  const adapter = await navigator.gpu?.requestAdapter();
+  const device = await adapter?.requestDevice();
+  const context = canvas.getContext('webgpu')
+  if (!device || !context) {
+    console.error("Failed to initialize WebGPU");
+    return;
+  }
+  context.configure({
+    device: device,
+    format: 'rgba16float',
+    colorSpace: 'srgb-linear',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    toneMapping: {mode:'clamp-to-extended'},
+  });
+
+  let v = rendering_hdr_headroom;
+  const renderPassDescriptor = {
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        clearValue: { r:v, g:v, b:v, a: 1.0 },
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
+  };
+
+  const commandEncoder = device.createCommandEncoder();
+  const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+  passEncoder.setViewport(0, 0, 32, 32, 0, 1);
+  passEncoder.end();
+  device.queue.submit([commandEncoder.finish()]);
+}
+
+function main() {
+  // Configure rendering slider.
+  RenderingHdrHeadroomSlider.addEventListener('input', onRenderingHdrHeadroomSliderChanged, false);
+
+  drawWebGPUCanvas();
+}
+</script>
+</head>
+
+<body onload='main()'>
+
+<h1>Screen details</h1>
+<p id="DisplayValue">Screen HDR headroom: (unknown)</p>
+<p><button type="button" id="ButtonDetails">Query screen HDR headroom</button></p>
+
+<h1>Rendering settings</h1>
+<p>
+<label id="RenderingHdrHeadroomSliderLabel" for="RenderingHdrHeadroomSlider">Rendering HDR headroom: 1.00</label>.
+</p>
+<p><input id="RenderingHdrHeadroomSlider" type="range" min="-1" max="4" step="0.1" value="0" list="tickmarks""/></p>
+<datalist id="tickmarks">
+  <option value="-1"></option>
+  <option value="0"></option>
+  <option value="1"></option>
+  <option value="2"></option>
+  <option value="3"></option>
+  <option value="4"></option>
+</datalist>
+</body>
+
+<h1>WebGPU rendering</h1>
+<p>
+This requires that "Experimental Web Platform features" be enabled in chrome://flags.
+</p>
+<p>
+WebGPU canvas that clears to HDR headroom: 
+</p>
+<canvas id="WebGPUCanvas" style="width:32px; height:32px; border:1px solid black;"></canvas>
+
+</html>
