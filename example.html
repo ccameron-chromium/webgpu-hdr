@@ -1,89 +1,142 @@
 <html>
 <head>
 <script>
-var current_screen_details;
-var rendering_hdr_headroom = 1;
+var gpuDevice = null;
+var gpuContext = null;
 
-function onRenderingHdrHeadroomSliderChanged() {
-  rendering_hdr_headroom = Math.pow(2.0, RenderingHdrHeadroomSlider.value);
-  RenderingHdrHeadroomSliderLabel.innerText = 'Rendering HDR headroom: ' + rendering_hdr_headroom.toFixed(2);
-  drawWebGPUCanvas();
+let parametricEval = function(x, a, b, c, d, e, f, g) {
+  const absX = Math.abs(x);
+  const sgnX = Math.sign(x);
+  return sgnX * (absX <= d) ? c*absX + f : Math.pow(a*absX + b, g) + e;
 }
 
-// Clear the canvas to rendering_hdr_headroom using WebGPU.
-async function drawWebGPUCanvas() {
-  const canvas = document.getElementById('WebGPUCanvas');
-  const adapter = await navigator.gpu?.requestAdapter();
-  const device = await adapter?.requestDevice();
-  const context = canvas.getContext('webgpu')
-  if (!device || !context) {
-    console.error("Failed to initialize WebGPU");
-    return;
-  }
-  context.configure({
-    device: device,
-    format: 'rgba16float',
-    colorSpace: 'srgb-linear',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    toneMapping: {mode:'clamp-to-extended'},
-  });
+let srgbToLinear = function(x) {
+  return parametricEval(
+      x, 1/1.055, 0.055/1.055, 1/12.92, 0.04045, 0, 0, 2.4);
+}
 
-  let v = rendering_hdr_headroom;
+let linearToSrgb = function(x) {
+  return parametricEval(
+      x, Math.pow(1.055, 2.4), 0, 12.92, 0.04045 / 12.92, -0.055, 0, 1/2.4);
+}
+
+async function drawGpuCanvas() {
+  if (!gpuDevice) {
+    const adapter = await navigator.gpu?.requestAdapter();
+    gpuDevice = await adapter?.requestDevice();
+    if (!gpuDevice) {
+      console.error("Failed to initialize WebGPU device");
+      return;
+    }
+  }
+  if (!gpuContext) {
+    gpuContext = GpuCanvas.getContext('webgpu');
+    if (!gpuContext) {
+      console.error("Failed to initialize WebGPU context");
+      return;
+    }
+  }
+
+  // Select the tone mapping mode based on the radio button.
+  let toneMappingMode = null;
+  if (ToneMapModeStandard.checked) {
+    toneMappingMode = "standard";
+  }
+  if (ToneMapModeExtended.checked) {
+    toneMappingMode = "extended";
+  }
+
+  // Select the pixel value to clear to from the slider.
+  let v = PixelValueSlider.value;
+
+  // Configure and clear the canvas.
+  gpuContext.configure({
+    device: gpuDevice,
+    format: 'rgba16float',
+    colorSpace: 'srgb',
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    toneMapping: {mode:toneMappingMode},
+  });
   const renderPassDescriptor = {
     colorAttachments: [
       {
-        view: context.getCurrentTexture().createView(),
+        view: gpuContext.getCurrentTexture().createView(),
         clearValue: { r:v, g:v, b:v, a: 1.0 },
         loadOp: 'clear',
         storeOp: 'store',
       },
     ],
   };
-
-  const commandEncoder = device.createCommandEncoder();
+  const commandEncoder = gpuDevice.createCommandEncoder();
   const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
   passEncoder.setViewport(0, 0, 32, 32, 0, 1);
   passEncoder.end();
-  device.queue.submit([commandEncoder.finish()]);
+  gpuDevice.queue.submit([commandEncoder.finish()]);
+}
+
+let update = function() {
+  // Update dynamic range query result.
+  DynamicRangeMatch.innerHTML = "(unsupported)";
+  if (window.matchMedia("(dynamic-range: standard)").matches) {
+    DynamicRangeMatch.innerHTML = "standard";
+  }
+  if (window.matchMedia("(dynamic-range: high)").matches) {
+    DynamicRangeMatch.innerHTML = "high";
+    DynamicRangeExplanation.hidden = true;
+  } else {
+    DynamicRangeExplanation.hidden = false;
+  }
+
+  // Update pixel value text.
+  PixelValue.innerHTML = Number(PixelValueSlider.value).toFixed(2);;
+  PixelValueLinear.innerHTML = srgbToLinear(PixelValueSlider.value).toFixed(2);
+
+  drawGpuCanvas();
 }
 
 function main() {
   // Configure rendering slider.
-  RenderingHdrHeadroomSlider.addEventListener('input', onRenderingHdrHeadroomSliderChanged, false);
+  PixelValueSlider.addEventListener('input', update, false);
 
-  drawWebGPUCanvas();
+  update();
 }
 </script>
 </head>
 
 <body onload='main()'>
 
-<h1>Screen details</h1>
-<p id="DisplayValue">Screen HDR headroom: (unknown)</p>
-<p><button type="button" id="ButtonDetails">Query screen HDR headroom</button></p>
+<h1>HDR support</h1>
+<p>The <tt>dynamic-range</tt> media query matches <tt id="DynamicRangeMatch">?</tt>.</p>
+
+<p id="DynamicRangeExplanation" hidden>This means that, on this display, setting the tone mapping mode to <tt>extended</tt> will have no effect (it will be the same as setting it to <tt>standard</tt>).</p>
+
+<p>
+This demo requires that "Experimental Web Platform features" be enabled in chrome://flags.
+</p>
 
 <h1>Rendering settings</h1>
 <p>
-<label id="RenderingHdrHeadroomSliderLabel" for="RenderingHdrHeadroomSlider">Rendering HDR headroom: 1.00</label>.
+  Pixel value:
+  <input id="PixelValueSlider" type="range" min="0" max="3" step="0.01" value="1" list="PixelValueSliderTicks""/>
+  <datalist id="PixelValueSliderTicks">
+    <option value="0" label="0"></option>
+    <option value="1" label="1"></option>
+    <option value="2" label="2"></option>
+    <option value="3" label="3"></option>
+  </datalist>
+  <tt id="PixelValue"></tt> (sRGB-encoded), <tt id="PixelValueLinear">?</tt> (linear-encoded)
 </p>
-<p><input id="RenderingHdrHeadroomSlider" type="range" min="-1" max="4" step="0.1" value="0" list="tickmarks""/></p>
-<datalist id="tickmarks">
-  <option value="-1"></option>
-  <option value="0"></option>
-  <option value="1"></option>
-  <option value="2"></option>
-  <option value="3"></option>
-  <option value="4"></option>
-</datalist>
-</body>
 
-<h1>WebGPU rendering</h1>
+
 <p>
-This requires that "Experimental Web Platform features" be enabled in chrome://flags.
+Tone map mode: 
+<input type="radio" name="ToneMapMode" id="ToneMapModeStandard" onchange="update();" checked="true">
+<label for="ToneMapModeStandard"><tt>standard</tt></label>
+<input type="radio" name="ToneMapMode" id="ToneMapModeExtended" onchange="update();">
+<label for="ToneMapModeExtended"><tt>extended</tt></label>
 </p>
-<p>
-WebGPU canvas that clears to HDR headroom: 
-</p>
-<canvas id="WebGPUCanvas" style="width:32px; height:32px; border:1px solid black;"></canvas>
+
+<h1>Canvas</h1>
+<canvas id="GpuCanvas" style="width:32px; height:32px; border:1px solid black;"></canvas>
 
 </html>

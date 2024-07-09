@@ -47,24 +47,24 @@ dynamic range.
 Add the following new dictionaries.
 
 ```webidl
-enum CanvasColorMode {
+enum GPUCanvasToneMappingMode {
   "default",
   "extended",
 };
 
-dictionary CanvasColorMetadata {
-  CanvasColorMode mode = "default";
+dictionary GPUCanvasToneMapping {
+  GPUCanvasToneMappingMode mode = "default";
 };
 
 partial dictionary GPUCanvasConfiguration {
-  CanvasColorMetadata colorMetadata;
+  GPUCanvasToneMapping toneMapping;
 };
 ```
 
 When a canvas is created with a `GPUCanvasConfiguration` which specifies a
-`colorMetadata` which specifies a `mode` of `"extended"`, then colors will not
-be clamped to the standard dynamic range, but rather will be clamped to full the
-dynamic range of the display device.
+`toneMapping` which specifies a `mode` of `"extended"`, then colors will not
+be restricted to the standard dynamic range, but rather will be restricted to
+the full dynamic range of the display device.
 
 ## Example use
 
@@ -78,7 +78,7 @@ Display P3 color space.
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
     alphaMode: "opaque",
     colorSpace: "display-p3",
-    colorMetadata: { mode:"extended" }
+    toneMapping: { mode:"extended" }
   });
 ```
 
@@ -98,11 +98,11 @@ content color volume (CCV), nominal diffuse white luminance (NDWL),
 and reference viewing environment (REVE).
 
 The natural proposal to include these would add new members to
-`CanvasColorMetadata` corresponding to the various types of metadata.
+`GPUCanvasToneMapping` corresponding to the various types of metadata.
 
 This proposal does not introduce any non-trivial (clamping) tone mapping
 behaviors. Additional tone mapping behaviors can be introduced by adding
-corresponding new members to CanvasColorMode.
+corresponding new members to GPUCanvasToneMappingMode.
 
 For example, to specify HDR10 tone mapping with a default MDCV metadata
 and with CLLI metadata that indicates an average of 200 nits and maxmium of
@@ -112,7 +112,7 @@ and with CLLI metadata that indicates an average of 200 nits and maxmium of
   context.configure({
     ...
     colorSpace: "rec2100-display-linear",
-    colorMetadata: { mode:"hdr10", clli:{maxFALL:200, maxCLL:1200} }
+    toneMapping: { mode:"hdr10", clli:{maxFALL:200, maxCLL:1200} }
   });
 ```
 
@@ -128,6 +128,16 @@ example.
                           gl.drawingBufferWidth,
                           gl.drawingBufferHeight);
   gl.drawingBufferColorSpace = "display-p3";
-  gl.drawingBufferColorMetadata = { mode:"extended" };
+  gl.drawingBufferToneMapping = { mode:"extended" };
 ```
+
+## Notes on CanvasRenderingContext2D and unification of APIs
+
+Unlike WebGL and WebGPU, CanvasRenderingContext2D does not have the ability to
+specify that its backbuffer (its bitmap) be of any other pixel format than 8-bit.
+This limitation makes this API have no effect.
+
+When that situation changes, it would be appropriate to create a
+`CanvasToneMapping` dictionary and `CanvasToneMappingMode` enum, and update
+WebGL and WebGPU to use those.
 
