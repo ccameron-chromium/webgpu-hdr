@@ -35,7 +35,6 @@ accurate characterization of the behavior of all implemenations is:
 > E.g, the color value (1.09,-0.23,-0.15) in an 'srgb' canvas will produce
 > the same color as the color value (1,0,0) in 'display-p3' canvas.
 
-
 ## Goal
 
 The goal of this proposal is to provide a mechanism through which a WebGPU
@@ -48,12 +47,12 @@ Add the following new dictionaries.
 
 ```webidl
 enum GPUCanvasToneMappingMode {
-  "default",
+  "standard",
   "extended",
 };
 
 dictionary GPUCanvasToneMapping {
-  GPUCanvasToneMappingMode mode = "default";
+  GPUCanvasToneMappingMode mode = "standard";
 };
 
 partial dictionary GPUCanvasConfiguration {
